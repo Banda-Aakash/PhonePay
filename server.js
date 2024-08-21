@@ -55,13 +55,13 @@ app.post('/auth/status', authReqStatus);
 app.post('/recurring/debit/execute', recurringDebitExec);
 
 // Recurring Debit Status route
-app.get('/recurring/debit/status', recurringDebitStatus);
+app.post('/recurring/debit/status', recurringDebitStatus);
 
 // Recurring Notification route
 app.post('/recurring/notification', recurringNotification);
 
 // User Subscription Status route
-app.get('/subscription/status', userSubscriptionStatus);
+app.post('/subscription/status', userSubscriptionStatus);
 
 // Verify VPA route
 app.post('/verify/vpa', verifyVPA);

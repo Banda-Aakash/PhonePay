@@ -19,6 +19,7 @@ function createChecksum(payload, endpoint) {
 
 module.exports = async function (req, res) {
   const { subscriptionId, transactionId, amount, userId } = req.body;
+  console.log('Received:', { subscriptionId, transactionId, amount, userId });
   const payload = {
     merchantId: MERCHANT_ID,
     merchantUserId: userId,
@@ -46,7 +47,7 @@ module.exports = async function (req, res) {
       }
     );
     console.log("PhonePe response:", response.data);
-    res.send(response.data);
+    res.send(response.data.data);
   } catch (error) {
     if (error.response) {
       console.error("Error data:", error.response.data);

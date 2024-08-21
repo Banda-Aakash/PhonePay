@@ -15,7 +15,8 @@ function createChecksum(endpoint) {
 }
 
 module.exports = async function (req, res) {
-  const { merchantTransactionId } = req.params;
+  const { merchantTransactionId } = req.body;
+  console.log(merchantTransactionId)
   const endpoint = `/v3/recurring/debit/status/${MERCHANT_ID}/${merchantTransactionId}`;
 
   const xVerifyChecksum = createChecksum(endpoint);

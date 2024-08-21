@@ -12,20 +12,33 @@ const App = () => {
     });
     const [environment, setEnvironment] = useState("SANDBOX");
     const [merchantId, setMerchantID] = useState("PGTESTPAYUAT140");
+    const [merchantSubscriptionId, setMerchantSubscriptionID] = useState("PGTESTPAYUAT140");
     const [authRequestID,setAuthRequestID]=useState("");
     const [appID, setAppID] = useState(null);
     const [enableLogging, setEnableLogging] = useState(true);
-    const [subscriptionId, setSubscriptionId] = useState(""); // State to store the subscription ID
+    const [subscriptionID, setSubscriptionID] = useState(""); // State to store the subscription ID
     const [authStatus, setAuthStatus] = useState(""); // State to store the auth status
-
+    const [notificationID, setnotificationID] = useState("")
     // Ensure merchantUserId is set to a valid value
     const merchantUserId = "testUser123"; // Replace with a valid user ID
+
+    const address = 'https://44e1-2405-201-c012-164-4898-c70a-3fa5-2645.ngrok-free.app';
 
     const generateTransactionId = () => {
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 100000);
         const merchantPrefix = "T";
         return `${merchantPrefix}${timestamp}${random}`;
+    };
+
+    const generateUniqueId = (length = 16) => {
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let uniqueId = '';
+        for (let i = 0; i < length; i++) {
+            const randomIndex = Math.floor(Math.random() * charset.length);
+            uniqueId += charset[randomIndex];
+        }
+        return uniqueId;
     };
 
     const validateInputs = () => {
@@ -44,6 +57,8 @@ const App = () => {
         if (!validateInputs()) return;
 
         phonepeSDK.init(environment, merchantId, appID, enableLogging).then(res => {
+
+            const MerchantSubscriptionId = generateUniqueId();
             const transactionId = generateTransactionId();
             const requestBody = {
                 merchantId: merchantId,
@@ -79,7 +94,7 @@ const App = () => {
             ).then(resp => {
                 console.log('Transaction response:', resp);
                 // Store the subscription ID for later use
-                setSubscriptionId(resp.subscriptionId); // Update this as per the response structure
+                setSubscriptionID(resp.subscriptionId); // Update this as per the response structure
                 // Handle successful transaction
             }).catch(err => {
                 console.error("Transaction error:", err);
@@ -102,27 +117,29 @@ const App = () => {
     
         console.log("Setup Autopay Request Body:", requestBody);
     
-        const address = 'https://62cc-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
+        // const address = 'https://62cc-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
     
         try {
             // Step 1: Create the subscription
             const subscriptionResponse = await axios.post(`${address}/subscription/create`, requestBody);
             console.log('Subscription response:', subscriptionResponse.data);
             const { subscriptionId } = subscriptionResponse.data.data;
-    
+            // console.log(subscriptionResponse.data.id);
+            const id=subscriptionResponse.data.id;
+            setMerchantSubscriptionID(id);
             if (!subscriptionId) {
                 throw new Error('Subscription ID is missing in the response');
             }
     
             console.log(`Subscription ID: ${subscriptionId}`);
-            setSubscriptionId(subscriptionId);
+            setSubscriptionID(subscriptionId);
     
             // Step 2: Generate authRequestID and submit auth request
             const authRequestID = generateTransactionId();
             setAuthRequestID(authRequestID);
     
             const authResponse = await axios.post(`${address}/auth/submit`, {
-                subscriptionId: subscriptionId,
+                subscriptionId: subscriptionID,
                 authRequestId: authRequestID,
                 amount: data.amount,
                 userId: merchantUserId,
@@ -151,7 +168,7 @@ const App = () => {
     };
     
     const pollAuthStatus = async (authRequestID) => {
-        const address = 'https://de52-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
+        // const address = 'https://de52-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
     
         try {
             const statusResponse = await axios.post(`${address}/auth/status`, {
@@ -184,11 +201,38 @@ const App = () => {
     };
     
     const startRecurringInit= async()=>{
+        
         const response = await axios.post(`${address}/recurring/init`, {
-            subscriptionId: subscriptionId,
+            subscriptionId: subscriptionID,
             transactionId: authRequestID,
             amount:data.amount * 100,
-            userId:merchantUserId
+            userId: merchantUserId,
+        });
+        console.log(response.data)
+        let state=response.data.state;
+        console.log(state);
+        const notificationId=response.data.notificationId;
+        setnotificationID(notificationId)
+        if(state==='ACCEPTED'){
+            console.log("Accepted");
+            startRecurringDebit()
+        }
+    }
+    const startRecurringDebit= async()=>{
+        console.log('called')
+        const response=await axios.post(`${address}/recurring/debit/execute`, {
+            subscriptionId: subscriptionID,
+            transactionId: authRequestID,
+            notificationId:notificationID,
+            amount:data.amount * 100,
+            userId: merchantUserId,
+        });
+        showDebitStatus()
+    }
+
+    const showDebitStatus=async()=>{
+        const response=await axios.post(`${address}/recurring/debit/status`, {
+            merchantTransactionId:authRequestID,
         });
     }
     const handleError = (error) => {

@@ -63,7 +63,10 @@ module.exports = async function (req, res) {
         console.log('PhonePe response:', response.data);
 
         // Return response to client
-        res.status(200).json(response.data);
+        res.status(200).json({
+            ...response.data,
+            id: MerchantSubscriptionId
+          });
     } catch (error) {
         console.error('Error creating user subscription:', error.message);
         if (error.response) {

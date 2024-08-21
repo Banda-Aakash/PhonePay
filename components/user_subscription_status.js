@@ -15,7 +15,7 @@ function createChecksum(endpoint) {
 }
 
 module.exports = async function (req, res) {
-  const { merchantId, merchantSubscriptionId } = req.params;
+  const { merchantId, merchantSubscriptionId } = req.body;
 
   if (!merchantId || !merchantSubscriptionId) {
     console.error('Merchant ID and Merchant Subscription ID are required');
