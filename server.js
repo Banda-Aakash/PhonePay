@@ -16,13 +16,13 @@ const recurringDebitStatus = require('./components/recurring_debit_status');
 const revokeSub = require('./components/revoke_sub');
 const userSubscriptionStatus = require('./components/user_subscription_status');
 const verifyVPA = require('./components/verify_vpa');
-const recurringInit = require('./components/recurring_init'); // New
-const callbackRevoke = require('./components/callback_revoke'); // New
+const recurringInit = require('./components/recurring_init'); 
+const callbackRevoke = require('./components/callback_revoke'); 
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3000;
 
-// Setting up middleware
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -41,10 +41,6 @@ app.get('/', (req, res) => {
   res.send('PhonePe Integration APIs!');
 });
 
-// Health check route
-app.get('/health', (req, res) => {
-  res.send('Server is healthy!');
-});
 
 // Create User Subscription route
 app.post('/subscription/create', createUserSubscription);
@@ -53,7 +49,7 @@ app.post('/subscription/create', createUserSubscription);
 app.post('/auth/submit', submitAuthReq);
 
 // Auth Request Status route
-app.get('/auth/status', authReqStatus);
+app.post('/auth/status', authReqStatus);
 
 // Recurring Debit Execute route
 app.post('/recurring/debit/execute', recurringDebitExec);

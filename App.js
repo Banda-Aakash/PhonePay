@@ -12,6 +12,7 @@ const App = () => {
     });
     const [environment, setEnvironment] = useState("SANDBOX");
     const [merchantId, setMerchantID] = useState("PGTESTPAYUAT140");
+    const [authRequestID,setAuthRequestID]=useState("");
     const [appID, setAppID] = useState(null);
     const [enableLogging, setEnableLogging] = useState(true);
     const [subscriptionId, setSubscriptionId] = useState(""); // State to store the subscription ID
@@ -90,83 +91,120 @@ const App = () => {
         });
     };
 
-    const setupAutopayHandler = () => {
+    const setupAutopayHandler = async () => {
         if (!validateInputs()) return;
-
+    
         const requestBody = {
             amount: data.amount * 100, // Amount in paise
             mobile: data.mobile,
             merchantUserId: merchantUserId // Ensure this is included
         };
-
-        // Log request body
+    
         console.log("Setup Autopay Request Body:", requestBody);
-
-        axios.post('http://192.168.29.14:3002/subscription/create', requestBody)
-            .then(response => {
-                console.log('Subscription response:', response.data);
-                const { subscriptionId } = response.data.data;
-
-                if (!subscriptionId) {
-                    throw new Error('Subscription ID is missing in the response');
-                }
-
-                console.log(`Subscription ID: ${subscriptionId}`); // Log the ID for debugging
-                setSubscriptionId(subscriptionId); // Store the subscription ID
-
-                // Step 7: Merchant server calls the SUBMIT AUTH REQUEST API
-                return axios.post('http://192.168.29.14:3002/auth/submit', {
-                    subscriptionId: subscriptionId, // Use the stored subscription ID
-                    authRequestId: generateTransactionId(), // Generate a unique authRequestId
-                    amount: data.amount,
-                    userId: merchantUserId,
-                    targetApp: "com.phonepe.app" // Adjust as per the target app
-                });
-            })
-            .then(response => {
-                console.log('Auth request response:', response.data);
-                const { redirectUrl } = response.data.data;
-
-                // Step 9: Redirect user to the PhonePe app for authorization
-                if (redirectUrl) {
-                    console.log(`Redirecting user to: ${redirectUrl}`);
-                    // Use Linking to open the URL
-                    Linking.openURL(redirectUrl).catch(err => console.error("Failed to open URL:", err));
-                } else {
-                    throw new Error('Redirect URL is missing');
-                }
-            })
-            .then(() => {
-                // Step 11: Fetch auth status from the merchant server
-                return axios.get(`http://192.168.29.14:3002/auth/status/${merchantUserId}`);
-            })
-            .then(response => {
-                console.log('Auth status response:', response.data);
-                const { authStatus } = response.data.data;
-
-                // Display auth status to the user
-                setAuthStatus(authStatus);
-
-                if (authStatus === 'SUCCESS') {
-                    Alert.alert('Success', 'Autopay setup successful');
-                } else {
-                    Alert.alert('Failed', 'Autopay setup failed');
-                }
-            })
-            .catch(error => {
-                console.error("Setup autopay error:", error);
-                if (error.response) {
-                    console.error("Error response data:", error.response.data);
-                    console.error("Error response status:", error.response.status);
-                    console.error("Error response headers:", error.response.headers);
-                } else if (error.request) {
-                    console.error("Error request data:", error.request);
-                } else {
-                    console.error("Error message:", error.message);
-                }
-                Alert.alert("Error", "An error occurred while setting up autopay");
+    
+        const address = 'https://62cc-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
+    
+        try {
+            // Step 1: Create the subscription
+            const subscriptionResponse = await axios.post(`${address}/subscription/create`, requestBody);
+            console.log('Subscription response:', subscriptionResponse.data);
+            const { subscriptionId } = subscriptionResponse.data.data;
+    
+            if (!subscriptionId) {
+                throw new Error('Subscription ID is missing in the response');
+            }
+    
+            console.log(`Subscription ID: ${subscriptionId}`);
+            setSubscriptionId(subscriptionId);
+    
+            // Step 2: Generate authRequestID and submit auth request
+            const authRequestID = generateTransactionId();
+            setAuthRequestID(authRequestID);
+    
+            const authResponse = await axios.post(`${address}/auth/submit`, {
+                subscriptionId: subscriptionId,
+                authRequestId: authRequestID,
+                amount: data.amount,
+                userId: merchantUserId,
+                targetApp: "com.phonepe.app"
             });
+    
+            console.log('Auth request response:', authResponse.data);
+            const { redirectUrl } = authResponse.data.data;
+    
+            if (redirectUrl) {
+                console.log(`Redirecting user to: ${redirectUrl}`);
+                await Linking.openURL(redirectUrl).catch(err => {
+                    throw new Error(`Failed to open URL: ${err}`);
+                });
+    
+                // Step 3: Start polling the status after a delay to allow time for the user to complete authorization
+                setTimeout(() => {
+                    pollAuthStatus(authRequestID);
+                }, 5000); // Delay to allow time for user to authorize in PhonePe
+            } else {
+                throw new Error('Redirect URL is missing');
+            }
+        } catch (error) {
+            handleError(error);
+        }
     };
+    
+    const pollAuthStatus = async (authRequestID) => {
+        const address = 'https://de52-2405-201-c012-164-70c4-6f33-c36d-be54.ngrok-free.app';
+    
+        try {
+            const statusResponse = await axios.post(`${address}/auth/status`, {
+                authRequestId: authRequestID // Send authRequestId in the request body
+            });
+    
+            console.log('Auth status response:', statusResponse.data);
+            const subscriptionState = statusResponse.data.data?.subscriptionDetails?.state;
+            const transactionState = statusResponse.data.data?.transactionDetails?.state;
+    
+            console.log(`Subscription State: ${subscriptionState}`);
+            console.log(`Transaction State: ${transactionState}`);
+    
+            // Determine overall auth status based on response
+            let status;
+            if (subscriptionState === 'ACTIVE' && transactionState === 'COMPLETED') {
+                Alert.alert("AutoPay Successful")
+                status = 'SUCCESS';
+                startRecurringInit();
+            } else if (subscriptionState === 'FAILED' || transactionState === 'FAILED') {
+                Alert.alert("AutoPay Failed")
+                status = 'FAILED';
+            } else {
+                Alert.alert("AutoPay Pending")
+                status = 'PENDING';
+            }
+        } catch (error) {
+            handleError(error);
+        }
+    };
+    
+    const startRecurringInit= async()=>{
+        const response = await axios.post(`${address}/recurring/init`, {
+            subscriptionId: subscriptionId,
+            transactionId: authRequestID,
+            amount:data.amount * 100,
+            userId:merchantUserId
+        });
+    }
+    const handleError = (error) => {
+        console.error("Setup autopay error:", error);
+        if (error.response) {
+            console.error("Error response data:", error.response.data);
+            console.error("Error response status:", error.response.status);
+            console.error("Error response headers:", error.response.headers);
+        } else if (error.request) {
+            console.error("Error request data:", error.request);
+        } else {
+            console.error("Error message:", error.message);
+        }
+        Alert.alert("Error", "An error occurred while setting up autopay");
+    };
+    
 
     return (
         <View>
