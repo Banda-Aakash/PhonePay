@@ -22,7 +22,7 @@ const App = () => {
     // Ensure merchantUserId is set to a valid value
     const merchantUserId = "testUser123"; // Replace with a valid user ID
 
-    const address = 'https://44e1-2405-201-c012-164-4898-c70a-3fa5-2645.ngrok-free.app';
+    const address = 'https://61eb-152-58-236-142.ngrok-free.app';
 
     const generateTransactionId = () => {
         const timestamp = Date.now();
@@ -248,7 +248,14 @@ const App = () => {
         }
         Alert.alert("Error", "An error occurred while setting up autopay");
     };
-    
+
+    const handleCancel= async()=>{
+        console.log("Cancel Invoked");
+        const response=await axios.post(`${address}/subscription/cancel`, {
+            subscriptionId: subscriptionID,
+            userId: merchantUserId,
+        });
+    }
 
     return (
         <View>
@@ -268,7 +275,8 @@ const App = () => {
                     />
                     <Button title="Pay" onPress={submitHandler} />
                     <Button title="Setup Autopay" onPress={setupAutopayHandler} />
-                    {authStatus ? <Text>Authorization Status: {authStatus}</Text> : null}
+                    <Button title="Cancel Subscription" onPress={handleCancel} />
+                    {/* {authStatus ? <Text>Authorization Status: {authStatus}</Text> : null} */}
                 </View>
             </SafeAreaView>
         </View>

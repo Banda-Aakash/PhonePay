@@ -18,6 +18,7 @@ const userSubscriptionStatus = require('./components/user_subscription_status');
 const verifyVPA = require('./components/verify_vpa');
 const recurringInit = require('./components/recurring_init'); 
 const callbackRevoke = require('./components/callback_revoke'); 
+const cancel_user_subscription = require('./components/cancel_user_subscription');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -73,44 +74,45 @@ app.post('/recurring/init', recurringInit);
 app.post('/callback/revoke', callbackRevoke);
 
 // Cancel Subscription route (New)
-app.post('/subscription/cancel', (req, res) => {
-  const { subscriptionId } = req.body;
+app.post('/subscription/cancel', cancel_user_subscription);
+  // (req, res) => {
+//   const { subscriptionId } = req.body;
 
-  if (!subscriptionId) {
-    return res.status(400).json({ success: false, message: 'Subscription ID is required' });
-  }
+//   if (!subscriptionId) {
+//     return res.status(400).json({ success: false, message: 'Subscription ID is required' });
+//   }
 
-  const salt_key = process.env.SALT_KEY;
-  const salt_Index = process.env.SALT_INDEX;
+//   const salt_key = process.env.SALT_KEY;
+//   const salt_Index = process.env.SALT_INDEX;
 
-  const payload = {
-    merchantId: process.env.MERCHANT_ID,
-    merchantUserId: process.env.MERCHANT_USER_ID,
-    subscriptionId: subscriptionId,
-  };
+//   const payload = {
+//     merchantId: process.env.MERCHANT_ID,
+//     merchantUserId: process.env.MERCHANT_USER_ID,
+//     subscriptionId: subscriptionId,
+//   };
 
-  const payload_main = Buffer.from(JSON.stringify(payload)).toString('base64');
-  const string = `${payload_main}/v3/recurring/subscription/cancel${salt_key}`;
-  const checksum = crypto.createHash('sha256').update(string).digest('hex') + `###${salt_Index}`;
+//   const payload_main = Buffer.from(JSON.stringify(payload)).toString('base64');
+//   const string = `${payload_main}/v3/recurring/subscription/cancel${salt_key}`;
+//   const checksum = crypto.createHash('sha256').update(string).digest('hex') + `###${salt_Index}`;
 
-  axios.post('https://api-preprod.phonepe.com/apis/pg-sandbox/v3/recurring/subscription/cancel',
-    { request: payload_main },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Verify': checksum,
-        'X-Callback-URL': process.env.CALLBACK_URL
-      }
-    })
-    .then(response => {
-      console.log('Cancel subscription response:', response.data);
-      res.json(response.data);
-    })
-    .catch(error => {
-      console.error('Cancel subscription error:', error.response ? error.response.data : error.message);
-      res.status(500).json({ success: false, message: 'Failed to cancel subscription' });
-    });
-});
+//   axios.post('https://api-preprod.phonepe.com/apis/pg-sandbox/v3/recurring/subscription/cancel',
+//     { request: payload_main },
+//     {
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'X-Verify': checksum,
+//         'X-Callback-URL': process.env.CALLBACK_URL
+//       }
+//     })
+//     .then(response => {
+//       console.log('Cancel subscription response:', response.data);
+//       res.json(response.data);
+//     })
+//     .catch(error => {
+//       console.error('Cancel subscription error:', error.response ? error.response.data : error.message);
+//       res.status(500).json({ success: false, message: 'Failed to cancel subscription' });
+//     });
+// });
 
 // S2S Callback Handler
 app.post('/callback', (req, res) => {
