@@ -22,7 +22,7 @@ const App = () => {
     // Ensure merchantUserId is set to a valid value
     const merchantUserId = "testUser123"; // Replace with a valid user ID
 
-    const address = 'https://61eb-152-58-236-142.ngrok-free.app';
+    const address = 'https://37b6-2405-201-c012-164-18c6-cb34-328b-e7cc.ngrok-free.app';
 
     const generateTransactionId = () => {
         const timestamp = Date.now();

@@ -6,6 +6,9 @@ const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 const SALT_INDEX = 1;
 const SALT_KEY = "775765ff-824f-4cc4-9053-c3926e493514";
 
+
+const address = 'https://37b6-2405-201-c012-164-18c6-cb34-328b-e7cc.ngrok-free.app';
+
 // Helper function to create checksum
 function createChecksum(payload, endpoint) {
     const bufferObj = Buffer.from(JSON.stringify(payload), "utf8");
@@ -47,6 +50,7 @@ module.exports = async function (req, res) {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-VERIFY': xVerifyChecksum,
+                    "X-CALLBACK-URL": `${address}/callback/cancel`
                 },
             }
         );

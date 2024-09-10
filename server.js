@@ -75,6 +75,42 @@ app.post('/callback/revoke', callbackRevoke);
 
 // Cancel Subscription route (New)
 app.post('/subscription/cancel', cancel_user_subscription);
+
+
+app.post('/callback/cancel', (req, res) => {
+  // Decode base64-encoded response
+  const decodedResponse = Buffer.from(req.body.response, 'base64').toString('utf-8');
+  
+  // Parse the JSON response
+  let jsonResponse;
+  try {
+    jsonResponse = JSON.parse(decodedResponse);
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+    return res.status(400).json({ error: 'Invalid JSON format' });
+  }
+
+  // Log the response
+  console.log('Cancel Subscription Callback Received:', jsonResponse);
+
+  // Extract fields from the decoded JSON
+  const { success, code, message, data } = jsonResponse;
+
+  if (success && code === 'SUCCESS') {
+    const subscriptionId = data.subscriptionDetails.subscriptionId;
+    const state = data.subscriptionDetails.state;
+    console.log(`Subscription ${subscriptionId} is in state: ${state}`);
+    
+    // Process the response (e.g., update the subscription status in your database)
+    
+    // Send a response back to PhonePe
+    res.status(200).json({ message: 'Callback received successfully' });
+  } else {
+    console.error(`Error in callback: ${message}`);
+    res.status(400).json({ error: message });
+  }
+});
+
   // (req, res) => {
 //   const { subscriptionId } = req.body;
 
